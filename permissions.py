@@ -1,4 +1,4 @@
-from loop import WORKDIR
+from config import WORKDIR
 DENY_LIST = ["rm -rf /", "sudo", "shutdown", "reboot", "mkfs", "dd if=", "> /dev/sda"]
 
 def check_deny_list(command : str) -> str | None:

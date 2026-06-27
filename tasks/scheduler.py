@@ -1,5 +1,5 @@
 from pathlib import Path
-from loop import WORKDIR
+from config import WORKDIR
 from datetime import datetime
 from dataclasses import dataclass, asdict
 import time, random, json, threading

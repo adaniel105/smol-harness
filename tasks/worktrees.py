@@ -1,5 +1,5 @@
 from pathlib import Path
-from loop import WORKDIR
+from config import WORKDIR
 from tasks.tasks import load_task, save_task
 import subprocess, time, json, re
 

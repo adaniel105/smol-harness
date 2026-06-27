@@ -1,4 +1,4 @@
-from loop import WORKDIR
+from config import WORKDIR
 
 HOOKS = {"UserPromptSubmit": [], "PreToolUse": [],
          "PostToolUse": [], "Stop": []}

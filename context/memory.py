@@ -1,15 +1,12 @@
-from loop import client, MODEL
+from config import client
 import os, json, time
 from pathlib import Path
+from config import MODEL, PERSIST_THRESHOLD, KEEP_RECENT_TOOL_RESULTS, WORKDIR
 from tools.mcp_connector import mcp_clients
 
-WORKDIR = Path.cwd()
-MODEL = os.environ["MODEL_ID"]
 TOOL_RESULTS_DIR = WORKDIR / ".task_outputs" / "tool-results"
 MEMORY_DIR = WORKDIR / ".memory"
 MEMORY_INDEX = MEMORY_DIR / "MEMORY.md"
-PERSIST_THRESHOLD = 30000
-KEEP_RECENT_TOOL_RESULTS = 3
 TRANSCRIPT_DIR = WORKDIR / ".transcripts"
 
 active_teammates: dict[str, bool] = {}

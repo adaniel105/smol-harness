@@ -1,4 +1,4 @@
-from loop import WORKDIR
+from config import WORKDIR
 from dataclasses import dataclass, asdict
 from pathlib import Path
 import time, random, json

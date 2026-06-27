@@ -1,12 +1,9 @@
-from pathlib import Path
 from datetime import datetime
+from config import CONTEXT_LIMIT, WORKDIR
 from skills.loader import list_skills
 from tools.mcp_connector import mcp_clients
 from context.memory import tool_result_budget, snip_compact, micro_compact, estimate_size, compact_history
 from tasks.workers import collect_background_results
-
-CONTEXT_LIMIT = 50000
-WORKDIR = Path.cwd()
 # ── Prompt Assembly ──
 
 PROMPT_SECTIONS = {

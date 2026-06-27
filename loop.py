@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
-
-import ast
-import json
-import os
-import subprocess
 import time
+import json
 import random
 import threading
 import re
+from types import SimpleNamespace
 from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass, asdict, field
-import yaml
 from context.prompt_assembly import assemble_system_prompt, prepare_context, inject_background_notifications, build_user_content
 from context.memory import update_context, compact_history, reactive_compact, block_type
 from tools.mcp_connector import assemble_tool_pool
@@ -29,28 +25,7 @@ try:
 except ImportError:
     READLINE_AVAILABLE = False
 
-from openai import OpenAI
-from dotenv import load_dotenv
-
-load_dotenv(override=True)
-
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-WORKDIR = Path.cwd()
-client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=OPENROUTER_API_KEY,
-)
-
-MODEL = os.environ["MODEL_ID"]
-PRIMARY_MODEL = MODEL
-FALLBACK_MODEL = os.getenv("FALLBACK_MODEL_ID")
-
-DEFAULT_MAX_TOKENS = 8000
-ESCALATED_MAX_TOKENS = 16000
-MAX_RETRIES = 3
-MAX_CONSECUTIVE_529 = 2
-MAX_RECOVERY_RETRIES = 2
-BASE_DELAY_MS = 500
+from config import OPENROUTER_API_KEY, WORKDIR, MODEL, PRIMARY_MODEL, FALLBACK_MODEL, DEFAULT_MAX_TOKENS, ESCALATED_MAX_TOKENS, MAX_RETRIES, MAX_CONSECUTIVE_529, MAX_RECOVERY_RETRIES, BASE_DELAY_MS, client
 CONTINUATION_PROMPT = "Continue from the previous response. Do not repeat completed work."
 PROMPT = "\033[36ms20 >> \033[0m"
 CLI_ACTIVE = False
@@ -122,9 +97,9 @@ agent_lock = threading.Lock()
 
 def call_llm(messages: list, context: dict, tools: list, state: RecoveryState, max_tokens: int):
     system = assemble_system_prompt(context)
+    messages.append({"role": "system", "content": system})
     return with_retry(lambda: client.chat.completions.create(
         model=state.current_model,
-        system=system,
         messages=messages,
         tools=tools,
         max_tokens=max_tokens,
@@ -137,6 +112,7 @@ def agent_loop(messages: list, context: dict):
     max_tokens = DEFAULT_MAX_TOKENS
 
     while True:
+        global rounds_since_todo
         fired = consume_cron_queue()
         for job in fired:
             messages.append({"role": "user", "content": f"[Scheduled] {job.prompt}"})
@@ -159,19 +135,16 @@ def agent_loop(messages: list, context: dict):
                 messages[:] = reactive_compact(messages)
                 state.has_attempted_reactive_compact = True
                 continue
-            messages.append({"role": "assistant", "content": [{"type": "text", "text": f"[Error] {type(e).__name__}: {e}"}]})
+            messages.append({"role": "assistant", "content": f"[Error] {type(e).__name__}: {e}"})
             return
 
-        res = response.choices[0]
-        msg = res.message
-
-        if res.finish_reason == "length":
+        if response.choices[0].finish_reason == "length":
             if not state.has_escalated:
                 max_tokens = ESCALATED_MAX_TOKENS
                 state.has_escalated = True
                 print(f"  \033[33m[max_tokens] retry with {max_tokens}\033[0m")
                 continue
-            messages.append({"role": "assistant", "content": msg.content})
+            messages.append({"role": "assistant", "content": response.choices[0].message.content})
             if state.recovery_count < MAX_RECOVERY_RETRIES:
                 messages.append({"role": "user", "content": CONTINUATION_PROMPT})
                 state.recovery_count += 1
@@ -180,9 +153,11 @@ def agent_loop(messages: list, context: dict):
 
         max_tokens = DEFAULT_MAX_TOKENS
         state.has_escalated = False
-        messages.append({"role": "assistant", "content": msg.content})
+        msg = response.choices[0].message
+        tool_calls = [tc.model_dump() for tc in msg.tool_calls] if msg.tool_calls else None
+        messages.append({"role": "assistant", "content": msg.content, "tool_calls": tool_calls})
 
-        if not has_tool_use(msg.content):
+        if not has_tool_use(msg):
             trigger_hooks("Stop", messages)
             return
 
@@ -191,8 +166,8 @@ def agent_loop(messages: list, context: dict):
         for tool_call in msg.tool_calls:
             name = tool_call.function.name
             args = json.loads(tool_call.function.arguments)
-            if tool_call.type != "function":
-                continue
+            tc_id = tool_call.id
+            shim = SimpleNamespace(name=name, input=args, id=tc_id)
             print(f"\033[36m> {name}\033[0m")
 
             if name == "compact":
@@ -201,20 +176,20 @@ def agent_loop(messages: list, context: dict):
                 compacted_now = True
                 break
 
-            blocked = trigger_hooks("PreToolUse", tool_call)
+            blocked = trigger_hooks("PreToolUse", shim)
             if blocked:
-                results.append({"type": "tool_result", "tool_use_id": tool_call.id, "content": str(blocked)})
+                results.append({"type": "tool_result", "tool_use_id": tc_id, "content": str(blocked)})
                 continue
 
             if should_run_background(name, args):
-                bg_id = start_background_task(tool_call, handlers)
+                bg_id = start_background_task(shim, handlers)
                 output = f"[Background task {bg_id} started] Result will arrive as a task_notification."
-                results.append({"type": "tool_result", "tool_use_id": tool_call.id, "content": output})
+                results.append({"type": "tool_result", "tool_use_id": tc_id, "content": output})
                 continue
 
             handler = handlers.get(name)
             output = call_tool_handler(handler, args, name)
-            trigger_hooks("PostToolUse", tool_call, output)
+            trigger_hooks("PostToolUse", shim, output)
             print(str(output)[:300])
 
             if name == "todo_write":
@@ -222,7 +197,7 @@ def agent_loop(messages: list, context: dict):
             else:
                 rounds_since_todo += 1
 
-            results.append({"type": "tool_result", "tool_use_id": tool_call.id, "content": output})
+            results.append({"type": "tool_result", "tool_use_id": tc_id, "content": output})
 
         if compacted_now:
             continue
@@ -234,11 +209,9 @@ def print_turn_assistants(messages: list, turn_start: int):
     for msg in messages[turn_start:]:
         if msg.get("role") != "assistant":
             continue
-        for block in msg.get("content", []):
-            if block_type(block) != "text":
-                continue
-            text = block["text"] if isinstance(block, dict) else block.text
-            terminal_print(text)
+        content = msg.get("content")
+        if isinstance(content, str) and content.strip():
+            terminal_print(content)
 
 
 def cron_autorun_loop(history: list, context: dict):

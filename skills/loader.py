@@ -1,5 +1,5 @@
 from pathlib import Path
-from loop import WORKDIR
+from config import WORKDIR
 import yaml
 
 SKILLS_DIR = WORKDIR / "skills"

@@ -1,5 +1,4 @@
 import re
-from tools.tools import BUILTIN_TOOLS, BUILTIN_HANDLERS
 
 
 # MCP is modeled as late-bound tools: connect first, then discovered server
@@ -99,6 +98,7 @@ def connect_mcp(name: str) -> str:
 
 
 def assemble_tool_pool() -> tuple[list[dict], dict]:
+    from tools.tools import BUILTIN_TOOLS, BUILTIN_HANDLERS
     tools = list(BUILTIN_TOOLS)
     handlers = dict(BUILTIN_HANDLERS)
     for server_name, mcp_client in mcp_clients.items():
@@ -107,9 +107,12 @@ def assemble_tool_pool() -> tuple[list[dict], dict]:
             safe_tool = normalize_mcp_name(tool_def["name"])
             prefixed = f"mcp__{safe_server}__{safe_tool}"
             tools.append({
-                "name": prefixed,
-                "description": tool_def.get("description", ""),
-                "input_schema": tool_def.get("inputSchema", {}),
+                "type": "function",
+                "function": {
+                    "name": prefixed,
+                    "description": tool_def.get("description", ""),
+                    "parameters": tool_def.get("inputSchema", {}),
+                },
             })
             handlers[prefixed] = (
                 lambda *, c=mcp_client, t=tool_def["name"], **kw: c.call_tool(t, kw))
