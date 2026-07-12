@@ -5,7 +5,7 @@
 [![Code style](https://img.shields.io/badge/code%20style-ruff-000000)](https://docs.astral.sh/ruff)
 
 
-smol agent harness built with Liquid's LFM models (SLMs are cool). sandboxing for agent fan out using [`forkd()`](https://github.com/deeplethe/forkd)
+smol agent harness built atop OpenRouter, with out-of-the-box sandboxing capabilities for subagent management using [`forkd()`](https://github.com/deeplethe/forkd)
 
 ## License
 MIT
