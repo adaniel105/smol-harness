@@ -16,7 +16,7 @@ class MessageBus:
         inbox = MAILBOX_DIR / f"{to_agent}.jsonl"
         with open(inbox, "a") as f:
             f.write(json.dumps(msg) + "\n")
-        from runner.loop import terminal_print as _tp
+        from runner import terminal_print as _tp
         _tp(f"  \033[33m[bus] {from_agent} → {to_agent}: "
             f"({msg_type}) {content[:50]}\033[0m")
 
