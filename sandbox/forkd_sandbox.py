@@ -2,11 +2,12 @@ import json
 import urllib.request
 import urllib.error
 from pathlib import Path
-from sandbox.config import (
+from config.config import (
     FORKD_CONTROLLER_URL,
     FORKD_SNAPSHOT_TAG,
     FORKD_DEFAULT_MEMORY_MB,
     FORKD_DEFAULT_TIMEOUT,
+    FORKD_TOKEN
 )
 
 
@@ -68,7 +69,7 @@ class ForkdSandbox:
 
 class ForkdSandboxPool:
     def __init__(
-        self, controller_url: str | None = None, auth_token: str | None = None
+        self, controller_url: str | None = None, auth_token: str | None = FORKD_TOKEN
     ):
         self.controller_url = (controller_url or FORKD_CONTROLLER_URL).rstrip("/")
         self.auth_token = auth_token
