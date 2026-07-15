@@ -1,5 +1,4 @@
-from pathlib import Path
-from config import WORKDIR
+from config.config import WORKDIR
 import yaml
 
 SKILLS_DIR = WORKDIR / "skills"

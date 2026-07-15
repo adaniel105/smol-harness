@@ -1,7 +1,9 @@
-from config import WORKDIR
+from config.config import WORKDIR
 from dataclasses import dataclass, asdict
 from pathlib import Path
-import time, random, json
+import time
+import random
+import json
 # Tasks are tiny durable records. Later systems add ownership, dependencies,
 # worktrees, and teammates on top of this same file-backed state.
 TASKS_DIR = WORKDIR / ".tasks"
@@ -77,8 +79,10 @@ def claim_task(task_id: str, owner: str = "agent") -> str:
                 if _task_path(d).exists() and load_task(d).status != "completed"]
         missing = [d for d in task.blockedBy if not _task_path(d).exists()]
         parts = []
-        if deps: parts.append(f"blocked by: {deps}")
-        if missing: parts.append(f"missing deps: {missing}")
+        if deps: 
+            parts.append(f"blocked by: {deps}")
+        if missing: 
+            parts.append(f"missing deps: {missing}")
         return "Cannot start — " + ", ".join(parts)
     task.owner = owner
     task.status = "in_progress"

@@ -1,4 +1,4 @@
-import threading, json
+import threading
 from hooks.hook import trigger_hooks
 
 # ── Background Tasks ──
@@ -54,7 +54,7 @@ def start_background_task(block, handlers: dict) -> str:
 
 
 def spawn_teammate_thread(name: str, role: str, prompt: str) -> str:
-    from subagents.subagent import spawn_subagent
+    from subagents.subagent import spawn_subagent_sandboxed
     global _bg_counter
     _bg_counter += 1
     bg_id = f"tm_{_bg_counter:04d}"
@@ -65,7 +65,7 @@ def spawn_teammate_thread(name: str, role: str, prompt: str) -> str:
             "status": "running",
         }
     def worker():
-        result = spawn_subagent(prompt)
+        result = spawn_subagent_sandboxed(prompt)
         with background_lock:
             background_tasks[bg_id]["status"] = "completed"
             background_results[bg_id] = str(result)

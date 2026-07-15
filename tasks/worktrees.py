@@ -1,7 +1,10 @@
 from pathlib import Path
-from config import WORKDIR
+from config.config import WORKDIR
 from tasks.tasks import load_task, save_task
-import subprocess, time, json, re
+import subprocess
+import time
+import json
+import re
 
 
 # ── Worktree System ──
@@ -77,10 +80,10 @@ def _count_worktree_changes(path: Path) -> tuple[int, int]:
     try:
         r1 = subprocess.run(["git", "status", "--porcelain"],
                             cwd=path, capture_output=True, text=True, timeout=10)
-        files = len([l for l in r1.stdout.strip().splitlines() if l.strip()])
+        files = len([line for line in r1.stdout.strip().splitlines() if line.strip()])
         r2 = subprocess.run(["git", "log", "@{push}..HEAD", "--oneline"],
                             cwd=path, capture_output=True, text=True, timeout=10)
-        commits = len([l for l in r2.stdout.strip().splitlines() if l.strip()])
+        commits = len([line for line in r2.stdout.strip().splitlines() if line.strip()])
         return files, commits
     except Exception:
         return -1, -1

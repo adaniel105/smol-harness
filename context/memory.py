@@ -1,7 +1,8 @@
-from config import client
-import os, json, time
+from config.config import client
+import json
+import time
 from pathlib import Path
-from config import MODEL, PERSIST_THRESHOLD, KEEP_RECENT_TOOL_RESULTS, WORKDIR
+from config.config import MODEL, PERSIST_THRESHOLD, KEEP_RECENT_TOOL_RESULTS, WORKDIR
 from tools.mcp_connector import mcp_clients
 
 TOOL_RESULTS_DIR = WORKDIR / ".task_outputs" / "tool-results"

@@ -1,15 +1,10 @@
-#!/usr/bin/env python3
 import time
 import json
 import random
 import threading
-import re
 from types import SimpleNamespace
-from pathlib import Path
-from datetime import datetime
-from dataclasses import dataclass, asdict, field
 from context.prompt_assembly import assemble_system_prompt, prepare_context, inject_background_notifications, build_user_content
-from context.memory import update_context, compact_history, reactive_compact, block_type
+from context.memory import update_context, compact_history, reactive_compact
 from tools.mcp_connector import assemble_tool_pool
 from tools.tools import call_tool_handler
 from subagents.subagent import has_tool_use
@@ -25,9 +20,9 @@ try:
 except ImportError:
     READLINE_AVAILABLE = False
 
-from config import OPENROUTER_API_KEY, WORKDIR, MODEL, PRIMARY_MODEL, FALLBACK_MODEL, DEFAULT_MAX_TOKENS, ESCALATED_MAX_TOKENS, MAX_RETRIES, MAX_CONSECUTIVE_529, MAX_RECOVERY_RETRIES, BASE_DELAY_MS, client
+from config.config import PRIMARY_MODEL, FALLBACK_MODEL, DEFAULT_MAX_TOKENS, ESCALATED_MAX_TOKENS, MAX_RETRIES, MAX_CONSECUTIVE_529, MAX_RECOVERY_RETRIES, BASE_DELAY_MS, client
 CONTINUATION_PROMPT = "Continue from the previous response. Do not repeat completed work."
-PROMPT = "\033[36ms20 >> \033[0m"
+PROMPT = "\033[36mQuery: >> \033[0m"
 CLI_ACTIVE = False
 
 

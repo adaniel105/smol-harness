@@ -1,10 +1,10 @@
 from datetime import datetime
-from config import CONTEXT_LIMIT, WORKDIR
+from config.config import CONTEXT_LIMIT, WORKDIR
 from skills.loader import list_skills
 from tools.mcp_connector import mcp_clients
 from context.memory import tool_result_budget, snip_compact, micro_compact, estimate_size, compact_history
 from tasks.workers import collect_background_results
-# ── Prompt Assembly ──
+
 
 PROMPT_SECTIONS = {
     "identity": "You are a coding agent. Act, don't explain.",
@@ -22,8 +22,6 @@ PROMPT_SECTIONS = {
 
 
 def assemble_system_prompt(context: dict) -> str:
-    # The system prompt is rebuilt each turn from live context. This is where
-    # memory, skill catalog, MCP state, and active teammates become visible.
     sections = [PROMPT_SECTIONS["identity"],
                 PROMPT_SECTIONS["tools"],
                 PROMPT_SECTIONS["workspace"]]
@@ -48,8 +46,7 @@ def prepare_context(messages: list) -> list:
 
 
 def build_user_content(results: list[dict]) -> list[dict]:
-    # Tool results and completed background notifications are both returned to
-    # the model as user-side content, matching the tool_result feedback loop.
+    #pass tool results and background jobs as user response to model
     content = list(results)
     for note in collect_background_results():
         content.append({"type": "text", "text": note})

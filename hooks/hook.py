@@ -1,4 +1,4 @@
-from config import WORKDIR
+from config.config import WORKDIR
 
 HOOKS = {"UserPromptSubmit": [], "PreToolUse": [],
          "PostToolUse": [], "Stop": []}
@@ -22,15 +22,13 @@ DESTRUCTIVE = ["rm ", "> /etc/", "chmod 777"]
 
 def permission_hook(block):
     from tools.tools import safe_path
-    # The permission layer sees the raw tool_use before dispatch. It can deny,
-    # ask the user, or allow execution to continue.
     if block.name == "bash":
         command = block.input.get("command", "")
         for pattern in DENY_LIST:
             if pattern in command:
                 return f"Permission denied: '{pattern}' is on the deny list"
         if any(token in command for token in DESTRUCTIVE):
-            print(f"\n\033[33m[permission] destructive command\033[0m")
+            print("\n\033[33m[permission] destructive command\033[0m")
             print(f"  {command}")
             choice = input("  Allow? [y/N] ").strip().lower()
             if choice not in ("y", "yes"):

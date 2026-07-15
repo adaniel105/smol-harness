@@ -244,11 +244,11 @@ def create_agent(name: str, level: int, output_dir: Path):
     print(f"Created: {gitignore}")
 
     print(f"\nAgent '{name}' created at {agent_dir}")
-    print(f"\nNext steps:")
+    print("\nNext steps:")
     print(f"  1. cd {agent_dir}")
-    print(f"  2. cp .env.example .env")
-    print(f"  3. Edit .env with your API key")
-    print(f"  4. pip install anthropic python-dotenv")
+    print("  2. cp .env.example .env")
+    print("  3. Edit .env with your API key")
+    print("  4. pip install anthropic python-dotenv")
     print(f"  5. python {name}.py")
 
 

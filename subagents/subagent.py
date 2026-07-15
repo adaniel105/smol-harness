@@ -1,7 +1,12 @@
-from config import WORKDIR, client, MODEL
+from config.config import WORKDIR, client, MODEL
 from hooks.hook import trigger_hooks
+from sandbox.forkd_sandbox import ForkdSandbox, ForkdSandboxPool
 from types import SimpleNamespace
 import json
+import threading
+
+_MAX_SPAWN_DEPTH = 3
+_spawn_depth = threading.local()
 
 
 SUB_SYSTEM = (
@@ -94,3 +99,89 @@ def spawn_subagent(description: str) -> str:
             if text:
                 return text
     return "Subagent finished without a text summary."
+
+
+def spawn_subagent_sandboxed(
+    description: str,
+    sandbox: ForkdSandbox | None = None,
+    pool: ForkdSandboxPool | None = None,
+) -> str:
+    depth = getattr(_spawn_depth, "value", 0)
+    if depth >= _MAX_SPAWN_DEPTH:
+        return f"[SpawnLimit] Max spawn depth ({_MAX_SPAWN_DEPTH}) reached. Finish work inline."
+    _spawn_depth.value = depth + 1
+
+    from tools.tools import BUILTIN_HANDLERS
+    own_sandbox = sandbox is None
+    if sandbox is None:
+        pool = pool or ForkdSandboxPool()
+        try:
+            sandbox = pool.acquire()
+        except RuntimeError as e:
+            return f"[SandboxError] forkd unavailable: {e}"
+
+    try:
+        handlers = dict(BUILTIN_HANDLERS)
+        messages = [
+            {"role": "system", "content": SUB_SYSTEM},
+            {"role": "user", "content": description},
+        ]
+
+        for _ in range(30):
+            response = client.chat.completions.create(
+                model=MODEL,
+                messages=messages,
+                tools=SUB_TOOLS,
+                max_tokens=8000,
+            )
+            msg = response.choices[0].message
+            tool_calls_data = (
+                [tc.model_dump() for tc in msg.tool_calls] if msg.tool_calls else None
+            )
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": msg.content,
+                    "tool_calls": tool_calls_data,
+                }
+            )
+
+            if not has_tool_use(msg):
+                break
+
+            for tool_call in msg.tool_calls:
+                name = tool_call.function.name
+                args = json.loads(tool_call.function.arguments)
+                tc_id = tool_call.id
+                shim = SimpleNamespace(name=name, input=args, id=tc_id)
+
+                blocked = trigger_hooks("PreToolUse", shim)
+                if blocked:
+                    output = str(blocked)
+                else:
+                    handler = handlers.get(name)
+                    if handler:
+                        output = handler(sandbox, **args)
+                    else:
+                        output = f"Unknown tool: {name}"
+                    trigger_hooks("PostToolUse", shim, output)
+
+                messages.append(
+                    {
+                        "role": "tool",
+                        "content": str(output),
+                        "tool_call_id": tc_id,
+                    }
+                )
+
+        for msg in reversed(messages):
+            if msg["role"] == "assistant":
+                text = extract_text(msg.get("content"))
+                if text:
+                    return text
+        return "Subagent finished without a text summary."
+
+    finally:
+        _spawn_depth.value = depth
+        if own_sandbox and sandbox is not None:
+            sandbox.close()

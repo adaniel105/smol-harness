@@ -1,14 +1,20 @@
-import os, json, ast
+import json
+import ast
 import subprocess
-from config import WORKDIR
+from config.config import WORKDIR
 from pathlib import Path
-from tasks.tasks import get_task_json, claim_task, complete_task, create_task, list_tasks, CURRENT_TODOS
-from subagents.subagent import spawn_subagent
+from tasks.tasks import get_task_json, claim_task, complete_task, create_task, list_tasks
+# from subagents.subagent import spawn_subagent
+# from sandbox import spawn_subagent_sandboxed
+from subagents.subagent import spawn_subagent_sandboxed
+from sandbox.forkd_sandbox import ForkdSandbox, ForkdSandboxPool
 from skills.loader import load_skill
 from protocol.message_bus import BUS
 from protocol.protocols import consume_lead_inbox, new_request_id
 from tasks.scheduler import run_schedule_cron, run_list_crons, run_cancel_cron
 from tasks.worktrees import run_create_worktree, run_remove_worktree, run_keep_worktree
+
+
 
 BUILTIN_TOOLS = [
     {"type": "function", "function": {"name": "bash", "description": "Run a shell command.",
@@ -215,15 +221,13 @@ def run_request_plan(teammate: str, task: str) -> str:
 
 
 def run_review_plan(request_id: str, approve: bool, feedback: str = "") -> str:
-    from protocol.protocols import pending_requests, new_request_id, match_response
+    from protocol.protocols import match_response
     match_response("plan_approval_response" if approve else "plan_rejection_response",
                    request_id, approve)
     return f"Plan {'approved' if approve else 'rejected'} (req: {request_id})"
 
 
 def safe_path(p: str, cwd: Path = None) -> Path:
-    # File tools stay inside the workspace or teammate worktree. Bash remains
-    # powerful on purpose and is controlled by the permission hook instead.
     base = cwd or WORKDIR
     path = (base / p).resolve()
     if not path.is_relative_to(base):
@@ -232,20 +236,25 @@ def safe_path(p: str, cwd: Path = None) -> Path:
 
 
 def run_bash(command: str, cwd: Path = None,
-             run_in_background: bool = False) -> str:
-    # run_in_background is consumed by the dispatcher; direct execution ignores it.
+             run_in_background: bool = False, sandbox: ForkdSandboxPool | None = None) -> str:
+    # run_in_background is consumed by the dispatcher
     try:
-        r = subprocess.run(command, shell=True, cwd=cwd or WORKDIR,
-                           capture_output=True, text=True, timeout=120)
-        out = (r.stdout + r.stderr).strip()
-        return out[:50000] if out else "(no output)"
+        if sandbox:
+            return sandbox.exec(command)
+        else:        
+            r = subprocess.run(command, shell=True, cwd=cwd or WORKDIR,
+                            capture_output=True, text=True, timeout=120)
+            out = (r.stdout + r.stderr).strip()
+            return out[:50000] if out else "(no output)"
     except subprocess.TimeoutExpired:
         return "Error: Timeout (120s)"
 
 
 def run_read(path: str, limit: int | None = None,
-             offset: int = 0, cwd: Path = None) -> str:
+             offset: int = 0, cwd: Path = None, sandbox: ForkdSandbox | None = None) -> str:
     try:
+        if sandbox:
+            return sandbox.read_file(path, limit=limit, offset=offset)    
         lines = safe_path(path, cwd).read_text().splitlines()
         offset = max(int(offset or 0), 0)
         limit = int(limit) if limit is not None else None
@@ -257,38 +266,50 @@ def run_read(path: str, limit: int | None = None,
         return f"Error: {e}"
 
 
-def run_write(path: str, content: str, cwd: Path = None) -> str:
+def run_write(path: str, content: str, cwd: Path = None, sandbox: ForkdSandbox | None = None) -> str:
     try:
-        fp = safe_path(path, cwd)
-        fp.parent.mkdir(parents=True, exist_ok=True)
-        fp.write_text(content)
-        return f"Wrote {len(content)} bytes to {path}"
+        if sandbox:
+            return sandbox.write_file(path,content)
+        else:
+            fp = safe_path(path, cwd)
+            fp.parent.mkdir(parents=True, exist_ok=True)
+            fp.write_text(content)
+            return f"Wrote {len(content)} bytes to {path}"
     except Exception as e:
         return f"Error: {e}"
 
 
 def run_edit(path: str, old_text: str, new_text: str,
-             cwd: Path = None) -> str:
+             cwd: Path = None, sandbox: ForkdSandbox | None = None) -> str:
     try:
-        fp = safe_path(path, cwd)
-        text = fp.read_text()
-        if old_text not in text:
-            return f"Error: text not found in {path}"
-        fp.write_text(text.replace(old_text, new_text, 1))
-        return f"Edited {path}"
+        if sandbox:
+            escaped_old = old_text.replace("'", "'\\''")
+            escaped_new = new_text.replace("'", "'\\''")
+            cmd = f'python3 -c \'import sys; text = open("{path}").read(); text = text.replace("{escaped_old}", "{escaped_new}", 1); open("{path}", "w").write(text)\''
+            return sandbox.exec(cmd)
+        else:
+            fp = safe_path(path, cwd)
+            text = fp.read_text()
+            if old_text not in text:
+                return f"Error: text not found in {path}"
+            fp.write_text(text.replace(old_text, new_text, 1))
+            return f"Edited {path}"
     except Exception as e:
         return f"Error: {e}"
 
 
-def run_glob(pattern: str, cwd: Path = None) -> str:
+def run_glob(pattern: str, cwd: Path = None, sandbox: ForkdSandbox | None = None) -> str:
     import glob as g
     try:
-        base = cwd or WORKDIR
-        results = []
-        for match in g.glob(pattern, root_dir=base):
-            if (base / match).resolve().is_relative_to(base):
-                results.append(match)
-        return "\n".join(results) if results else "(no matches)"
+        if sandbox:
+            return sandbox.glob(pattern)
+        else:
+            base = cwd or WORKDIR
+            results = []
+            for match in g.glob(pattern, root_dir=base):
+                if (base / match).resolve().is_relative_to(base):
+                    results.append(match)
+            return "\n".join(results) if results else "(no matches)"
     except Exception as e:
         return f"Error: {e}"
 
@@ -354,7 +375,7 @@ def run_list_tasks() -> str:
 BUILTIN_HANDLERS = {
     "bash": run_bash, "read_file": run_read, "write_file": run_write,
     "edit_file": run_edit, "glob": run_glob,
-    "todo_write": run_todo_write, "task": spawn_subagent,
+    "todo_write": run_todo_write, "task": spawn_subagent_sandboxed,
     "load_skill": load_skill,
     "create_task": run_create_task, "list_tasks": run_list_tasks,
     "get_task": run_get_task,
