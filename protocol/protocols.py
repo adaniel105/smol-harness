@@ -1,7 +1,8 @@
 
 from dataclasses import dataclass, field
 from protocol.message_bus import BUS
-import time, random
+import time
+import random
 
 
 @dataclass
@@ -23,8 +24,7 @@ def new_request_id() -> str:
 
 
 def match_response(response_type: str, request_id: str, approve: bool):
-    # Responses are matched by request_id so one protocol reply cannot approve
-    # a different pending request.
+    #match response by request id
     state = pending_requests.get(request_id)
     if not state:
         return

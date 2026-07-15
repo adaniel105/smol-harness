@@ -1,11 +1,8 @@
+from config.config import WORKDIR
+import time
+import json
 
-from pathlib import Path
-from config import WORKDIR
-import time, json
 
-
-# Team communication is append-only JSONL mailboxes. This keeps the protocol
-# inspectable on disk and lets background teammates send messages.
 MAILBOX_DIR = WORKDIR / ".mailboxes"
 MAILBOX_DIR.mkdir(exist_ok=True)
 
@@ -19,7 +16,7 @@ class MessageBus:
         inbox = MAILBOX_DIR / f"{to_agent}.jsonl"
         with open(inbox, "a") as f:
             f.write(json.dumps(msg) + "\n")
-        from loop import terminal_print as _tp
+        from runner.loop import terminal_print as _tp
         _tp(f"  \033[33m[bus] {from_agent} → {to_agent}: "
             f"({msg_type}) {content[:50]}\033[0m")
 
