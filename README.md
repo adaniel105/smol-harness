@@ -8,7 +8,7 @@ smol agent harness built atop OpenRouter, with out-of-the-box sandboxing capabil
 
 ## MicroVM Setup
 
-smol-harness uses [`forkd()`](https://github.com/deeplethe/forkd) to sandbox subagents inside KVM-isolated microVMs. forkd is a microVM runtime built on [Firecracker](https://github.com/firecracker-microvm/firecracker) which allows spawning shortlived processes with shared parent memory. 
+smol-harness uses [`forkd()`](https://github.com/deeplethe/forkd) to sandbox subagents inside KVM-isolated microVMs. forkd is a microVM runtime built on [Firecracker](https://github.com/firecracker-microvm/firecracker) which allows spawning shortlived processes with shared parent memory.
 
 ### Why forkd
 
@@ -46,7 +46,7 @@ pip install forkd
 
 ### 3. Verify your install
 
-`forkd doctor` runs 17 checks: KVM, hardware virt, cgroup v2, Firecracker binary, kernel image, controller reachability, and more. Fix anything it flags before continuing:
+`forkd doctor` runs 17 checks: KVM, hardware virt, cgroup v2, Firecracker binary, kernel image, controller reachability e.t.c Fix anything it flags before continuing:
 
 ```bash
 forkd doctor
@@ -73,8 +73,6 @@ export FORKD_TOKEN
 export FORKD_CONTROLLER_URL="http://127.0.0.1:8889"
 export FORKD_SNAPSHOT_TAG="agent-harness-base"
 ```
-
-To persist across sessions, add the exports to your `~/.bashrc` or `~/.zshrc`.
 
 ## License
 MIT
