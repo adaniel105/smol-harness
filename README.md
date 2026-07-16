@@ -8,7 +8,7 @@ smol agent harness built atop OpenRouter, with out-of-the-box sandboxing capabil
 
 ## MicroVM Setup
 
-smol-harness uses [`forkd()`](https://github.com/deeplethe/forkd) to sandbox subagents inside KVM-isolated microVMs. forkd is a microVM runtime built on [Firecracker](https://github.com/firecracker-microvm/firecracker) which allows spawning shortlived processes with shared parent memory. It takes advantage of `mmap --MAP_PRIVATE` to spawn isolated child process of a warm-booted firecracker KVM with an already running python process copied over from snapshot state. Branches out, resumes parent and child VMs, runs tools(loop), appends content back to `messages[]`, exit.  
+smol-harness uses [`forkd()`](https://github.com/deeplethe/forkd) to sandbox subagents inside KVM-isolated microVMs. forkd is a microVM runtime built on [Firecracker](https://github.com/firecracker-microvm/firecracker) which allows spawning shortlived processes with shared parent memory. It takes advantage of `mmap --MAP_PRIVATE` to spawn isolated an child process of the firecracker KVM (already booted with `python` and `numpy`) with an already running python process copied over from snapshot state. Branches out, resumes parent and child VMs, runs tools(loop), appends content back to `messages[]`, exit.  
 
 ### Why forkd
 
