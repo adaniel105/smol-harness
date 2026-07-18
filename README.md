@@ -1,6 +1,5 @@
 # smol-harness
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Lint](https://img.shields.io/badge/code%20style-ruff-000000)](https://docs.astral.sh/ruff)
 
 ![design sketch](docs/image.png)
 

@@ -1,7 +1,25 @@
 from config.config import WORKDIR
+from typing import Callable
 
 HOOKS = {"UserPromptSubmit": [], "PreToolUse": [],
          "PostToolUse": [], "Stop": []}
+
+_permission_prompt_fn: Callable[[str], str] | None = None
+
+
+def set_permission_prompt_fn(fn: Callable[[str], str] | None) -> None:
+    """Set a custom prompt function for permission checks.
+
+    The function receives a message string and should return "y" or "n".
+    Set to None to restore default stdin input() behavior.
+    """
+    global _permission_prompt_fn
+    _permission_prompt_fn = fn
+
+
+def _default_permission_prompt(message: str) -> str:
+    print(f"\n\033[33m[permission] {message}\033[0m")
+    return input("  Allow? [y/N] ").strip().lower()
 
 
 def register_hook(event: str, callback):
@@ -22,15 +40,14 @@ DESTRUCTIVE = ["rm ", "> /etc/", "chmod 777"]
 
 def permission_hook(block):
     from tools.tools import safe_path
+    prompt_fn = _permission_prompt_fn or _default_permission_prompt
     if block.name == "bash":
         command = block.input.get("command", "")
         for pattern in DENY_LIST:
             if pattern in command:
                 return f"Permission denied: '{pattern}' is on the deny list"
         if any(token in command for token in DESTRUCTIVE):
-            print("\n\033[33m[permission] destructive command\033[0m")
-            print(f"  {command}")
-            choice = input("  Allow? [y/N] ").strip().lower()
+            choice = prompt_fn(f"destructive command: {command}")
             if choice not in ("y", "yes"):
                 return "Permission denied by user"
     if block.name in ("write_file", "edit_file"):
@@ -40,8 +57,7 @@ def permission_hook(block):
         except Exception:
             return f"Permission denied: path escapes workspace: {path}"
     if block.name.startswith("mcp__") and "deploy" in block.name:
-        print(f"\n\033[33m[permission] MCP destructive-looking tool: {block.name}\033[0m")
-        choice = input("  Allow? [y/N] ").strip().lower()
+        choice = prompt_fn(f"MCP destructive-looking tool: {block.name}")
         if choice not in ("y", "yes"):
             return "Permission denied by user"
     return None

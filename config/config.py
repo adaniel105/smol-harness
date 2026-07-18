@@ -1,9 +1,6 @@
 from pathlib import Path
-from dotenv import load_dotenv
 from openai import OpenAI
 import os
-
-load_dotenv(override=True)
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 WORKDIR = Path.cwd()

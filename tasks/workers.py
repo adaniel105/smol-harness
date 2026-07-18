@@ -65,7 +65,7 @@ def spawn_teammate_thread(name: str, role: str, prompt: str) -> str:
             "status": "running",
         }
     def worker():
-        result = spawn_subagent_sandboxed(prompt)
+        result = spawn_subagent_sandboxed(sandbox=None, description=prompt)
         with background_lock:
             background_tasks[bg_id]["status"] = "completed"
             background_results[bg_id] = str(result)

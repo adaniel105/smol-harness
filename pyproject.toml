@@ -1,3 +1,10 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["cli", "runner", "config", "context", "hooks", "protocol", "sandbox", "skills", "subagents", "tasks", "tools"]
+
 [project]
 name = "agent-harness"
 version = "0.1.0"
@@ -12,8 +19,15 @@ dependencies = [
     "pytest>=9.1.1",
     "pyyaml>=6.0.3",
     "ruff>=0.15.21",
+    "textual>=0.47.0",
     "uvicorn[standard]>=0.34.0",
 ]
+
+[project.scripts]
+agent-harness = "runner.main:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
 
 [dependency-groups]
 dev = [

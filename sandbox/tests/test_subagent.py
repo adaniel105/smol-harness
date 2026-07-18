@@ -1,11 +1,14 @@
 from unittest.mock import patch, MagicMock
 import json
 import pytest
+import threading
 
-from sandbox.subagent import (
+from subagents.subagent import (
     spawn_subagent_sandboxed,
     extract_text,
     has_tool_use,
+    _spawn_depth,
+    _MAX_SPAWN_DEPTH,
 )
 
 
@@ -86,18 +89,18 @@ class TestSubagentHelpers:
 
 
 class TestSpawnSubagentSandboxed:
-    @patch("sandbox.subagent.trigger_hooks", return_value=None)
-    @patch("sandbox.subagent.client")
+    @patch("subagents.subagent.trigger_hooks", return_value=None)
+    @patch("subagents.subagent.client")
     def test_returns_final_summary(self, mock_client, mock_hooks, mock_sandbox):
         resp = make_response([make_choice(make_mock_message("final summary", None))])
         mock_client.chat.completions.create.return_value = resp
 
-        result = spawn_subagent_sandboxed("do something", sandbox=mock_sandbox)
+        result = spawn_subagent_sandboxed(mock_sandbox, "do something")
 
         assert result == "final summary"
 
-    @patch("sandbox.subagent.trigger_hooks", return_value=None)
-    @patch("sandbox.subagent.client")
+    @patch("subagents.subagent.trigger_hooks", return_value=None)
+    @patch("subagents.subagent.client")
     def test_routes_bash_to_sandbox_exec(self, mock_client, mock_hooks, mock_sandbox):
         mock_response = make_response(
             [
@@ -120,13 +123,13 @@ class TestSpawnSubagentSandboxed:
             make_response([make_choice(make_mock_message("done", None))]),
         ]
 
-        result = spawn_subagent_sandboxed("run command", sandbox=mock_sandbox)
+        result = spawn_subagent_sandboxed(mock_sandbox, "run command")
 
         mock_sandbox.exec.assert_called_once_with("echo hello")
         assert result == "done"
 
-    @patch("sandbox.subagent.trigger_hooks", return_value=None)
-    @patch("sandbox.subagent.client")
+    @patch("subagents.subagent.trigger_hooks", return_value=None)
+    @patch("subagents.subagent.client")
     def test_routes_read_file_to_sandbox(self, mock_client, mock_hooks, mock_sandbox):
         mock_response = make_response(
             [
@@ -149,14 +152,14 @@ class TestSpawnSubagentSandboxed:
             make_response([make_choice(make_mock_message("done", None))]),
         ]
 
-        spawn_subagent_sandboxed("read file", sandbox=mock_sandbox)
+        spawn_subagent_sandboxed(mock_sandbox, "read file")
 
         mock_sandbox.read_file.assert_called_once_with(
             "/tmp/x.txt", limit=None, offset=0
         )
 
-    @patch("sandbox.subagent.trigger_hooks", return_value=None)
-    @patch("sandbox.subagent.client")
+    @patch("subagents.subagent.trigger_hooks", return_value=None)
+    @patch("subagents.subagent.client")
     def test_routes_write_file_to_sandbox(self, mock_client, mock_hooks, mock_sandbox):
         mock_response = make_response(
             [
@@ -179,12 +182,12 @@ class TestSpawnSubagentSandboxed:
             make_response([make_choice(make_mock_message("done", None))]),
         ]
 
-        spawn_subagent_sandboxed("write file", sandbox=mock_sandbox)
+        spawn_subagent_sandboxed(mock_sandbox, "write file")
 
         mock_sandbox.write_file.assert_called_once_with("/tmp/x.txt", "hello")
 
-    @patch("sandbox.subagent.trigger_hooks", return_value=None)
-    @patch("sandbox.subagent.client")
+    @patch("subagents.subagent.trigger_hooks", return_value=None)
+    @patch("subagents.subagent.client")
     def test_routes_glob_to_sandbox(self, mock_client, mock_hooks, mock_sandbox):
         mock_response = make_response(
             [
@@ -203,12 +206,12 @@ class TestSpawnSubagentSandboxed:
             make_response([make_choice(make_mock_message("done", None))]),
         ]
 
-        spawn_subagent_sandboxed("glob", sandbox=mock_sandbox)
+        spawn_subagent_sandboxed(mock_sandbox, "glob")
 
         mock_sandbox.glob.assert_called_once_with("*.py")
 
-    @patch("sandbox.subagent.trigger_hooks", return_value=None)
-    @patch("sandbox.subagent.client")
+    @patch("subagents.subagent.trigger_hooks", return_value=None)
+    @patch("subagents.subagent.client")
     def test_respects_tool_limit_30(self, mock_client, mock_hooks, mock_sandbox):
         responses = []
         for _ in range(31):
@@ -232,12 +235,12 @@ class TestSpawnSubagentSandboxed:
             )
         mock_client.chat.completions.create.side_effect = responses
 
-        result = spawn_subagent_sandboxed("loop", sandbox=mock_sandbox)
+        result = spawn_subagent_sandboxed(mock_sandbox, "loop")
 
         assert "without a text summary" in result
 
-    @patch("sandbox.subagent.trigger_hooks", return_value=None)
-    @patch("sandbox.subagent.client")
+    @patch("subagents.subagent.trigger_hooks", return_value=None)
+    @patch("subagents.subagent.client")
     def test_creates_and_closes_own_sandbox(self, mock_client, mock_hooks):
         pool = MagicMock()
         sandbox = MagicMock()
@@ -247,24 +250,24 @@ class TestSpawnSubagentSandboxed:
             [make_choice(make_mock_message("done", None))]
         )
 
-        spawn_subagent_sandboxed("task", pool=pool)
+        spawn_subagent_sandboxed(None, "task", pool=pool)
 
         pool.acquire.assert_called_once()
         sandbox.close.assert_called_once()
 
-    @patch("sandbox.subagent.trigger_hooks", return_value=None)
-    @patch("sandbox.subagent.client")
+    @patch("subagents.subagent.trigger_hooks", return_value=None)
+    @patch("subagents.subagent.client")
     def test_reuses_provided_sandbox(self, mock_client, mock_hooks, mock_sandbox):
         mock_client.chat.completions.create.return_value = make_response(
             [make_choice(make_mock_message("done", None))]
         )
 
-        spawn_subagent_sandboxed("task", sandbox=mock_sandbox)
+        spawn_subagent_sandboxed(mock_sandbox, "task")
 
         mock_sandbox.close.assert_not_called()
 
-    @patch("sandbox.subagent.trigger_hooks", return_value=None)
-    @patch("sandbox.subagent.client")
+    @patch("subagents.subagent.trigger_hooks", return_value=None)
+    @patch("subagents.subagent.client")
     def test_handles_unknown_tool_gracefully(
         self, mock_client, mock_hooks, mock_sandbox
     ):
@@ -279,11 +282,11 @@ class TestSpawnSubagentSandboxed:
             make_response([make_choice(make_mock_message("done", None))]),
         ]
 
-        result = spawn_subagent_sandboxed("run", sandbox=mock_sandbox)
+        result = spawn_subagent_sandboxed(mock_sandbox, "run")
         assert result == "done"
 
-    @patch("sandbox.subagent.trigger_hooks")
-    @patch("sandbox.subagent.client")
+    @patch("subagents.subagent.trigger_hooks")
+    @patch("subagents.subagent.client")
     def test_hook_can_block_tool(self, mock_client, mock_hooks, mock_sandbox):
         mock_hooks.side_effect = lambda *args: (
             "Blocked by hook" if args[0] == "PreToolUse" else None
@@ -300,15 +303,53 @@ class TestSpawnSubagentSandboxed:
             make_response([make_choice(make_mock_message("done", None))]),
         ]
 
-        spawn_subagent_sandboxed("run", sandbox=mock_sandbox)
+        spawn_subagent_sandboxed(mock_sandbox, "run")
         mock_sandbox.exec.assert_not_called()
 
-    @patch("sandbox.subagent.trigger_hooks")
-    @patch("sandbox.subagent.client")
+    @patch("subagents.subagent.trigger_hooks")
+    @patch("subagents.subagent.client")
     def test_sandbox_error_returns_message(self, mock_client, mock_hooks):
         pool = MagicMock()
         pool.acquire.side_effect = RuntimeError("forkd not available")
 
-        result = spawn_subagent_sandboxed("task", pool=pool)
+        result = spawn_subagent_sandboxed(None, "task", pool=pool)
 
         assert "forkd not available" in result
+
+    @patch("subagents.subagent.trigger_hooks", return_value=None)
+    @patch("subagents.subagent.client")
+    def test_spawn_depth_limit_prevents_recursion(self, mock_client, mock_hooks, mock_sandbox):
+        _spawn_depth.value = _MAX_SPAWN_DEPTH
+        try:
+            result = spawn_subagent_sandboxed(mock_sandbox, "nested task")
+            assert "Max spawn depth" in result
+            mock_client.chat.completions.create.assert_not_called()
+        finally:
+            _spawn_depth.value = 0
+
+    @patch("subagents.subagent.trigger_hooks", return_value=None)
+    @patch("subagents.subagent.client")
+    def test_spawn_depth_restored_on_completion(self, mock_client, mock_hooks, mock_sandbox):
+        mock_client.chat.completions.create.return_value = make_response(
+            [make_choice(make_mock_message("done", None))]
+        )
+        _spawn_depth.value = 0
+        spawn_subagent_sandboxed(mock_sandbox, "task")
+        assert _spawn_depth.value == 0
+
+    @patch("subagents.subagent.trigger_hooks", return_value=None)
+    @patch("subagents.subagent.client")
+    def test_spawn_depth_increments_during_execution(self, mock_client, mock_hooks, mock_sandbox):
+        depth_during_execution = []
+        
+        original_create = mock_client.chat.completions.create
+        def track_depth(*args, **kwargs):
+            depth_during_execution.append(_spawn_depth.value)
+            return make_response([make_choice(make_mock_message("done", None))])
+        
+        mock_client.chat.completions.create.side_effect = track_depth
+        _spawn_depth.value = 0
+        spawn_subagent_sandboxed(mock_sandbox, "task")
+        
+        assert depth_during_execution == [1]
+        assert _spawn_depth.value == 0
