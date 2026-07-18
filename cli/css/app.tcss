@@ -1,0 +1,75 @@
+Screen {
+    background: #0a0a0a;
+}
+
+Header {
+    background: #141414;
+    color: #fab283;
+    dock: top;
+}
+
+Footer {
+    background: #141414;
+    color: #808080;
+    dock: bottom;
+}
+
+#main {
+    height: 1fr;
+}
+
+#chat-area {
+    width: 2fr;
+    min-width: 40;
+    height: 1fr;
+}
+
+#chat-pane {
+    height: 1fr;
+    background: #0a0a0a;
+    color: #eeeeee;
+    padding: 0 1;
+    scrollbar-color: #484848;
+    scrollbar-color-hover: #606060;
+}
+
+#tool-pane {
+    width: 1fr;
+    min-width: 20;
+    max-width: 50;
+    height: 1fr;
+    background: #141414;
+    color: #eeeeee;
+    border-left: solid #484848;
+    padding: 0 1;
+    scrollbar-color: #484848;
+    scrollbar-color-hover: #606060;
+}
+
+#input-box {
+    height: auto;
+    min-height: 3;
+    max-height: 10;
+    background: #1e1e1e;
+    border-top: solid #484848;
+    padding: 0 1;
+}
+
+#input-box Input {
+    background: #1e1e1e;
+    color: #eeeeee;
+    border: none;
+}
+
+#input-box Input:focus {
+    background: #1e1e1e;
+}
+
+#status-bar {
+    height: 1;
+    background: #141414;
+    color: #808080;
+    padding: 0 1;
+}
+
+
