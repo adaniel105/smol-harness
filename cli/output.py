@@ -1,6 +1,6 @@
-"""Output abstraction for the TUI.
+"""
 
-Modules call tui_print() to emit messages. When a TUI queue is set,
+When a TUI queue is set,
 events land there for the app to poll. Otherwise they fall back to stdout.
 """
 

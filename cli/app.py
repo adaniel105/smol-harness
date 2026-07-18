@@ -36,7 +36,7 @@ class AgentTUI(App):
         with Horizontal(id="main"):
             with Vertical(id="chat-area"):
                 yield RichLog(id="chat-pane", markup=True, wrap=True)
-                yield Input(placeholder="Type your query...", id="input-box")
+                yield Input(placeholder="Ask me anything...", id="input-box")
             yield RichLog(id="tool-pane", markup=True, wrap=True)
         yield Footer()
 
@@ -56,7 +56,7 @@ class AgentTUI(App):
         chat.write(f"[bold {PRIMARY}]smol-harness TUI[/] — type your query below")
         chat.write(f"[{TEXT_MUTED}]Press Ctrl+C to quit, Ctrl+L to clear[/]")
 
-    # ── Output polling ───────────────────────────────────────────────
+
 
     def _poll_output(self) -> None:
         if self._sync_queue is None:

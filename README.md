@@ -5,6 +5,9 @@
 
 smol agent harness built atop OpenRouter, with out-of-the-box sandboxing capabilities for subagent management using [`forkd()`](https://github.com/deeplethe/forkd). 
 
+![terminal UI](image.png)
+<p align="center">Built using Textual.<p align="center">
+
 ## MicroVM Setup
 
 forkd is a microVM runtime built on [Firecracker](https://github.com/firecracker-microvm/firecracker) which allows spawning shortlived processes with shared parent memory. It takes advantage of `mmap --MAP_PRIVATE` to spawn isolated an child process of the firecracker KVM (already booted with `python` and `numpy`) with an already running python process copied over from snapshot state. Branches out, resumes parent and child VMs, runs tools(loop), appends content back to `messages[]`, exit.  
@@ -40,7 +43,9 @@ curl -sSL https://github.com/deeplethe/forkd/releases/download/v0.5.2/forkd-v0.5
 ### 2. Install the Python SDK
 
 ```bash
-pip install forkd
+uv venv venv
+source .venv/bin/activate
+uv add forkd
 ```
 
 ### 3. Verify your install
@@ -67,11 +72,22 @@ sudo bash scripts/netns-setup.sh 3       # per-child network namespaces
 The controller requires a bearer token for all API calls. Generate one and export it into your shell:
 
 ```bash
-FORKD_TOKEN=$(openssl rand -hex 32)
-export FORKD_TOKEN
-export FORKD_CONTROLLER_URL="http://127.0.0.1:8889"
-export FORKD_SNAPSHOT_TAG="agent-harness-base"
+openssl rand -hex 32
 ```
+Add to `.envrc`. Configure your `MODEL_ID`, `FALLBACK_MODEL_ID` with OpenRouter Model_ID names (as well as other necessary credentials)
+
+```bash
+direnv allow .
+```
+to export the environment variables.
+
+Then Finally,
+
+```bash
+uv runner/main.py --tui
+```
+to begin the agent loop.
+
 
 ## License
 MIT

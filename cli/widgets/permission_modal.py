@@ -7,12 +7,7 @@ from textual.widgets import Button, Static
 
 
 class PermissionModal(ModalScreen[bool]):
-    """Modal dialog for destructive command confirmation.
-
-    Displays the command being run and asks the user to Allow or Deny.
-    Returns True if allowed, False otherwise.
-    """
-
+ #maps to tools that raise warnings when run based on permissions set
     CSS = """
     PermissionModal {
         align: center middle;
