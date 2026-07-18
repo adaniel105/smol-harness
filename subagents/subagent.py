@@ -102,14 +102,13 @@ def spawn_subagent(description: str) -> str:
 
 
 def spawn_subagent_sandboxed(
+    sandbox: ForkdSandbox | None,
     description: str,
-    sandbox: ForkdSandbox | None = None,
     pool: ForkdSandboxPool | None = None,
 ) -> str:
-    depth = getattr(_spawn_depth, "value", 0)
-    if depth >= _MAX_SPAWN_DEPTH:
-        return f"[SpawnLimit] Max spawn depth ({_MAX_SPAWN_DEPTH}) reached. Finish work inline."
-    _spawn_depth.value = depth + 1
+    current_depth = getattr(_spawn_depth, "value", 0)
+    if current_depth >= _MAX_SPAWN_DEPTH:
+        return f"[SubagentError] Max spawn depth ({_MAX_SPAWN_DEPTH}) exceeded"
 
     from tools.tools import BUILTIN_HANDLERS
     own_sandbox = sandbox is None
@@ -120,6 +119,7 @@ def spawn_subagent_sandboxed(
         except RuntimeError as e:
             return f"[SandboxError] forkd unavailable: {e}"
 
+    _spawn_depth.value = current_depth + 1
     try:
         handlers = dict(BUILTIN_HANDLERS)
         messages = [
@@ -161,7 +161,7 @@ def spawn_subagent_sandboxed(
                 else:
                     handler = handlers.get(name)
                     if handler:
-                        output = handler(sandbox, **args)
+                        output = handler(sandbox=sandbox, **args)
                     else:
                         output = f"Unknown tool: {name}"
                     trigger_hooks("PostToolUse", shim, output)
@@ -180,8 +180,9 @@ def spawn_subagent_sandboxed(
                 if text:
                     return text
         return "Subagent finished without a text summary."
-
+    except Exception as e:
+        return f"[SubagentError] {e}"
     finally:
-        _spawn_depth.value = depth
+        _spawn_depth.value = current_depth
         if own_sandbox and sandbox is not None:
             sandbox.close()
