@@ -72,9 +72,16 @@ sudo bash scripts/netns-setup.sh 3       # per-child network namespaces
 The controller requires a bearer token for all API calls. Generate one and export it into your shell:
 
 ```bash
-openssl rand -hex 32
+sudo mkdir -p /etc/forkd
+sudo bash -c 'head -c 32 /dev/urandom | base64 > /etc/forkd/token'
+sudo chmod 600 /etc/forkd/token
 ```
-Add to `.envrc`. Configure your `MODEL_ID`, `FALLBACK_MODEL_ID` with OpenRouter Model_ID names (as well as other necessary credentials)
+then 
+
+```bash
+sudo cat /etc/forkd/token
+```
+to get the `FORKD_TOKEN` and add to `.envrc`. Configure your `MODEL_ID`, `FALLBACK_MODEL_ID` with OpenRouter Model_ID names (as well as other necessary credentials)
 
 ```bash
 direnv allow .
