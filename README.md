@@ -5,8 +5,8 @@
 
 smol agent harness built atop OpenRouter, with out-of-the-box sandboxing capabilities for subagent management using [`forkd()`](https://github.com/deeplethe/forkd). 
 
-![terminal UI](<img width="1557" height="774" alt="image" src="https://github.com/user-attachments/assets/df17b424-953d-4c6f-ad52-2256efe30028" />
-)
+<img width="1557" height="774" alt="image" src="https://github.com/user-attachments/assets/df17b424-953d-4c6f-ad52-2256efe30028" />
+
 <p align="center"><i>Built using Textual.</i><p align="center">
 
 ## MicroVM Setup
