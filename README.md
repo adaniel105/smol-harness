@@ -25,7 +25,7 @@ forkd is a microVM runtime built on [Firecracker](https://github.com/firecracker
 | Docker (runc) | OCI container | 335 s | no | 4 MiB | namespace |
 | gVisor (runsc) |  | 289 s | no | n/a | userspace |
 
-Numbers from [forkd's published benchmarks](https://github.com/deeplethe/forkd/tree/main/bench) on similar hardware (Ubuntu 24.04, 20 vCPU, 30 GiB, KVM).
+Numbers from [forkd's published benchmarks](https://github.com/deeplethe/forkd/tree/main/bench).
 
 ### Prerequisites
 
