@@ -15,17 +15,25 @@ forkd is a microVM runtime built on [Firecracker](https://github.com/firecracker
 
 ### Why forkd
 
-| Project | Primitive | Cold-start (N=100) | Fork-from-warm | Memory / child | Isolation |
-|---|---|---|---|---|---|
-| **[forkd](https://github.com/deeplethe/forkd)** | Firecracker + snapshot CoW | **101 ms** | yes | 0.12 MiB | KVM |
-| [CubeSandbox](https://github.com/TencentCloud/CubeSandbox) | RustVMM + KVM | 1.06 s | "coming soon" | <5 MiB | KVM |
-| [E2B](https://github.com/e2b-dev/E2B) | Firecracker (managed) | not in OSS | no | platform | KVM |
-| [BoxLite](https://github.com/boxlite-ai/boxlite) | KVM + Hypervisor.framework | 113 s | no | n/a | KVM + seccomp |
-| Firecracker (raw) | microVM only | 759 ms | manual | 84 MiB | KVM |
-| Docker (runc) | OCI container | 335 s | no | 4 MiB | namespace |
-| gVisor (runsc) |  | 289 s | no | n/a | userspace |
+#### Bench
 
-Numbers from [forkd's published benchmarks](https://github.com/deeplethe/forkd/tree/main/bench).
+![spawn bench](docs/chart-spawn-50.png)
+Spawn 50 sandboxes, each ready to execute `numpy.zeros(5).tolist()`. Measure wall-clock from the first sandbox request to the last sandbox confirming the result.
+
+Host hardware:
+- Ubuntu 24.04
+- Linux 6.33.18.1
+- 8 vCPU
+- 4 GiB RAM
+- KVM enabled
+
+![memory bench](docs/chart-memory-per.png)
+
+Total memory usage per backend.
+
+Numbers from [forkd's published benchmarks](https://github.com/deeplethe/forkd/tree/main/bench) as reference (Ubuntu 24.04, 20 vCPU, 30 GiB, KVM)
+
+
 
 ### Prerequisites
 
