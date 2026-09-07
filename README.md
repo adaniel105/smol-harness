@@ -29,10 +29,9 @@ Host hardware:
 
 ![memory bench](docs/chart-memory-per.png)
 
-Total memory usage per backend.
+<p align="center"><i>Total memory usage per backend.</i><p align="center">
 
-Numbers from [forkd's published benchmarks](https://github.com/deeplethe/forkd/tree/main/bench) as reference (Ubuntu 24.04, 20 vCPU, 30 GiB, KVM)
-
+with beefier compute: [forkd's published benchmarks](https://github.com/deeplethe/forkd/tree/main/bench) 
 
 
 ### Prerequisites
