@@ -15,7 +15,7 @@ forkd is a microVM runtime built on [Firecracker](https://github.com/firecracker
 
 ### Why forkd
 
-#### Bench
+#### BENCHMARKS (on my local hardware, specs included in diagram)
 
 ![spawn bench](docs/chart-spawn-50.png)
 Spawn 50 sandboxes, each ready to execute `numpy.zeros(5).tolist()`. Measure wall-clock from the first sandbox request to the last sandbox confirming the result.
